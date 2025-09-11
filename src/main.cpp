@@ -99,6 +99,116 @@ void change_color(int r, int g, int b){
   strip.show();  // Update strip with new contents
 }
 
+void clear_strip(){
+  strip.fill(strip.Color(0, 0, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+}
+
+void set_brightness(int brightness){
+  strip.setBrightness(brightness); // Set brightness (0-255)
+  strip.show();  // Update strip with new contents
+}
+
+void increment_red(int increment){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    r = min(255, r + increment);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void increment_green(int increment){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    g = min(255, g + increment);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void increment_blue(int increment){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    b = min(255, b + increment);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void decrement_red(int decrement){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    r = max(0, r - decrement);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void decrement_green(int decrement){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    g = max(0, g - decrement);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void decrement_blue(int decrement){
+  for(int i = 0; i < LED_COUNT; i++){
+    uint32_t color = strip.getPixelColor(i);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    b = max(0, b - decrement);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();  // Update strip with new contents
+}
+
+void max_red_all(){
+  strip.fill(strip.Color(0, 0, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+  for(int i = 1; i < 256; i++){
+    strip.fill(strip.Color(i, 0, 0), 0, LED_COUNT);
+    strip.show();
+  }
+}
+
+void max_green_all(){
+  strip.fill(strip.Color(0, 0, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+  for(int i = 1; i < 256; i++){
+    strip.fill(strip.Color(0, i, 0), 0, LED_COUNT);
+    strip.show();
+  }
+
+}
+
+void max_blue_all(){
+  strip.fill(strip.Color(0, 0, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+  for(int i = 1; i < 256; i++){
+    strip.fill(strip.Color(0, 0, i), 0, LED_COUNT);
+    strip.show();
+  }
+}
+
 // Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
 void rainbow(int wait) {
   // Hue of first pixel runs 5 complete loops through the color wheel.
@@ -153,6 +263,31 @@ void liste_for_changes(){
       change_color(r, g, b);
     } else if(packet_string.find("rainbow") != std::string::npos) {
       rainbow(10);
+    } else if(packet_string.find("max_red") != std::string::npos) {
+      max_red_all();
+    } else if(packet_string.find("max_green") != std::string::npos) {
+      max_green_all();
+    } else if(packet_string.find("max_blue") != std::string::npos) {
+      max_blue_all();
+    } else if(packet_string.find("clear") != std::string::npos) {
+      clear_strip();
+    } else if(packet_string.find("increment_red") != std::string::npos) {
+      increment_red(15);
+    } else if(packet_string.find("increment_green") != std::string::npos) {
+      increment_green(15);
+    } else if(packet_string.find("increment_blue") != std::string::npos) {
+      increment_blue(15);
+    } else if(packet_string.find("decrement_red") != std::string::npos) {
+      decrement_red(15);
+    } else if(packet_string.find("decrement_green") != std::string::npos) {
+      decrement_green(15);
+    } else if(packet_string.find("decrement_blue") != std::string::npos) {
+      decrement_blue(15);
+    } else if(packet_string.find("set_brightness") != std::string::npos) {
+      int brightness;
+      if (sscanf(incomingPacket, "set_brightness %d", &brightness) == 1) {
+        set_brightness(brightness);
+      }
     } else {
       Serial.println("Unknown command");
     }
