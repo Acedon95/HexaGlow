@@ -18,6 +18,7 @@
 #include <iostream>
 #include <ESP32Ping.h>
 #include <WiFiUdp.h>
+#include <string>
 #ifdef __AVR__
 #include <avr/power.h>  // Required for 16 MHz Adafruit Trinket
 #endif
@@ -45,8 +46,8 @@ void test(){
 
 
 void connect_to_wlan(){
-    const char* ssid = "WLAN"; // Ersetzen Sie dies durch den Namen Ihres WLANs
-    const char* password = "PASSWORT"; // Ersetzen Sie dies durch Ihr WLAN-Passwort
+    const char* ssid = "<SSID>"; // Ersetzen Sie dies durch den Namen Ihres WLANs
+    const char* password = "pw"; // Ersetzen Sie dies durch Ihr WLAN-Passwort
     strip.fill(strip.Color(150, 0, 0), 0, LED_COUNT);
     strip.show();
     Serial.println();
@@ -93,18 +94,8 @@ String ping_router(){
   }
 }
 
-void make_green(){
-  strip.fill(strip.Color(0, 150, 0), 0, LED_COUNT);
-  strip.show();  // Update strip with new contents
-}
-
-void make_red(){
-  strip.fill(strip.Color(150, 0, 0), 0, LED_COUNT);
-  strip.show();  // Update strip with new contents
-}
-
-void make_blue(){
-  strip.fill(strip.Color(0, 0, 150), 0, LED_COUNT);
+void change_color(int r, int g, int b){
+  strip.fill(strip.Color(r, g, b), 0, LED_COUNT);
   strip.show();  // Update strip with new contents
 }
 
@@ -152,15 +143,15 @@ void liste_for_changes(){
       incomingPacket[len] = 0;
     }
     Serial.printf("Received packet of size %d from %s:%d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotePort());
-    Serial.printf("Packet contents: %s\n", incomingPacket);
+    Serial.printf("Packet contents: %sblub\n", incomingPacket);
 
-    if(strcmp(incomingPacket, "red") == 0){
-      make_red();
-    } else if(strcmp(incomingPacket, "green") == 0){
-      make_green();
-    } else if(strcmp(incomingPacket, "blue") == 0){
-      make_blue();
-    } else if(strcmp(incomingPacket, "rainbow") == 0){
+    std::string packet_string  = incomingPacket;
+
+    // Change the color based on the received rgb values
+    int r, g, b;
+    if (sscanf(incomingPacket, "%d,%d,%d", &r, &g, &b) == 3) {
+      change_color(r, g, b);
+    } else if(packet_string.find("rainbow") != std::string::npos) {
       rainbow(10);
     } else {
       Serial.println("Unknown command");
