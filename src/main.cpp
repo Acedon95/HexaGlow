@@ -14,6 +14,10 @@
 // Costs: max.: 45€ for 5m
 
 #include <Adafruit_NeoPixel.h>  // ignore this error in vscode. The Arduino IDE will compile it and upload it to the board.
+#include <WiFi.h>
+#include <iostream>
+#include <ESP32Ping.h>
+#include <WiFiUdp.h>
 #ifdef __AVR__
 #include <avr/power.h>  // Required for 16 MHz Adafruit Trinket
 #endif
@@ -30,111 +34,78 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // Argument 2 = Arduino pin number (most are valid)
 // Argument 3 = Pixel type flags, add together as needed:
 
-const int buffer_size = 8;
-uint8_t buffer[buffer_size];  //+2, 'cause "mo" is the header
-uint8_t buffer_old[buffer_size];
-uint8_t buffer_tmp[buffer_size];
-int ind = 0;
-int min_bright = 0;
-bool usb_usage = 0;
+WiFiUDP udp;
+unsigned int localPort = 4210;  // Port für eingehende "Pings"
 
-// setup() function -- runs once at startup --------------------------------
-void setup() {
-#if 1
-// These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
-// Any other board, you can remove this part (but no harm leaving it):
-#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
-  clock_prescale_set(clock_div_1);
-#endif
-  // END of Trinket-specific code.
-#endif
-
-  strip.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
-  strip.setBrightness(255);
-
-  strip.fill(strip.Color(255, 0, 0), 0, 6);
-  for (uint16_t i = 5; i < LED_COUNT; ++i) {
-    strip.setPixelColor(i, strip.Color(100, 1, 255));
-    strip.setPixelColor(i - 1, strip.Color(150, 3, 200));
-    strip.setPixelColor(i - 2, strip.Color(200, 7, 180));
-    strip.setPixelColor(i - 3, strip.Color(255, 9, 100));
-    strip.setPixelColor(i - 4, strip.Color(255, 11, 70));
-    strip.setPixelColor(i - 5, strip.Color(255, 13, 0));
-    strip.show();
-    delay(15);
-  }
-
-  for (uint16_t i = 0; i <= 255; ++i) {
-    strip.fill(strip.Color(255, i / 1.5, 2), 0, LED_COUNT);
-    strip.show();
-    delay(5);
-  }
-
-  Serial.begin(9600);  // Check max. value for your usb-port first (C340: 2M)
-  Serial.print("ml");     // Send string to host
-  strip.fill((strip.Color(0, 0, 0), 0, LED_COUNT));
-  strip.clear();
-  strip.show();
-
-//  while (ind <= buffer_size) {
-//    if (Serial.available() > 0) {
-//      buffer[ind++] = Serial.read();
-//      if (ind == buffer_size) {
-//        ind = 0;
-//        if (buffer[0] == 'm' && buffer[1] == 'o') {
-//          usb_usage = 1;
-//          break;
-//        }
-//        if (buffer[0] == 'r' && buffer[1] == 'b') {
-//          usb_usage = 2;
-//          break;
-//        }
-//      }
-//    }
-//  }
-}
 void test(){
   strip.fill(strip.Color(150, 0, 0), 0, LED_COUNT);
   strip.show();  // Update strip with new contents
   delay(40);   // Pause for a moment
 }
-// loop() function -- runs repeatedly as long as board is on ---------------
-void loop() {
-    Serial.print("Loop Start");
 
-//  if (usb_usage == 1) {
-//    maxlight(buffer);
-//  }
-//  if (usb_usage == 2) {
-//    rainbow(40);
-//  }
-//rainbow(40);
-test();
-Serial.print("big loop done");
 
+void connect_to_wlan(){
+    const char* ssid = "WLAN"; // Ersetzen Sie dies durch den Namen Ihres WLANs
+    const char* password = "PASSWORT"; // Ersetzen Sie dies durch Ihr WLAN-Passwort
+    strip.fill(strip.Color(150, 0, 0), 0, LED_COUNT);
+    strip.show();
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+
+    WiFi.begin(ssid, password); // Beginnt die Verbindung zum WLAN
+    while (WiFi.status() != WL_CONNECTED) { // Wartet, bis die Verbindung hergestellt ist
+      delay(500);
+      Serial.print(".");
+    }
+
+    Serial.println("");
+    Serial.println("WiFi connected!");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP()); // Gibt die zugewiesene IP-Adresse aus
+
+    udp.begin(localPort);
+
+    strip.fill(strip.Color(0, 150, 0), 0, LED_COUNT);
+    strip.show();  // Update strip with new contents
 }
 
+void create_wlan(){
+  const char* ap_ssid = "ESP32_AP"; // Name Ihres Access Points
+  const char* ap_password = "12345678"; // Passwort für Ihren Access Point
+  Serial.print("Creating Access Point: ");
+  Serial.println(ap_ssid);
 
+  WiFi.softAP(ap_ssid, ap_password); // Startet den Access Point
 
-void maxlight(uint8_t buffer[8]) {
-  if (Serial.available() > 0) {
-    buffer[ind++] = Serial.read();
-    if (ind >= buffer_size) {
-      ind = 0;
-      if (buffer[0] == 'm' && buffer[1] == 'o') {
-        strip.fill(strip.Color(0, 0, 0), 0, LED_COUNT);
-        // Left side:
-        strip.fill(strip.Color(buffer[2], buffer[3], buffer[4]), 0, 37);
-        // Right side:
-        strip.fill(strip.Color(buffer[5], buffer[6], buffer[7]), 37, 115);
-        strip.fill(strip.Color(buffer[5], buffer[6], buffer[7]), 117, LED_COUNT - 116);
-        // Turn two leds off, 'cause they'd shine right into my eyes:
-        strip.setPixelColor(115, strip.Color(0, 0, 0));
-        strip.setPixelColor(116, strip.Color(0, 0, 0));
-        strip.show();
-      }
-    }
+  Serial.println("Access Point created!");
+  Serial.print("AP IP Address: ");
+  Serial.println(WiFi.softAPIP()); // Gibt die IP-Adresse des Access Points aus
+}
+
+String ping_router(){
+  const IPAddress remote_ip(192,168,0,1);
+
+  if(Ping.ping(remote_ip)){
+    return "success";
+  } else {
+    return "failed";
   }
+}
+
+void make_green(){
+  strip.fill(strip.Color(0, 150, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+}
+
+void make_red(){
+  strip.fill(strip.Color(150, 0, 0), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+}
+
+void make_blue(){
+  strip.fill(strip.Color(0, 0, 150), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
 }
 
 // Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
@@ -171,3 +142,49 @@ void rainbow(int wait) {
 
   }
 }
+
+void liste_for_changes(){
+  int packetSize = udp.parsePacket();
+  if(packetSize){
+    char incomingPacket[255];
+    int len = udp.read(incomingPacket, 255);
+    if(len > 0){
+      incomingPacket[len] = 0;
+    }
+    Serial.printf("Received packet of size %d from %s:%d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotePort());
+    Serial.printf("Packet contents: %s\n", incomingPacket);
+
+    if(strcmp(incomingPacket, "red") == 0){
+      make_red();
+    } else if(strcmp(incomingPacket, "green") == 0){
+      make_green();
+    } else if(strcmp(incomingPacket, "blue") == 0){
+      make_blue();
+    } else if(strcmp(incomingPacket, "rainbow") == 0){
+      rainbow(10);
+    } else {
+      Serial.println("Unknown command");
+    }
+  }
+}
+
+
+// setup() function -- runs once at startup --------------------------------
+void setup() {
+  Serial.begin(9600);
+  strip.fill(strip.Color(150, 150, 150), 0, LED_COUNT);
+  strip.show();  // Update strip with new contents
+  connect_to_wlan();
+  //create_wlan();
+}
+
+
+
+
+// loop() function -- runs repeatedly as long as board is on ---------------
+void loop() {
+  //Serial.println(ping_router());
+  liste_for_changes();
+  delay(100);
+}
+
