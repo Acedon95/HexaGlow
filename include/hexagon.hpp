@@ -11,7 +11,7 @@ class Hexagon {
     int led_index_end;   // End index of the hexagon leds in the strip
     Adafruit_NeoPixel strip;
 
-
+    Hexagon();
     Hexagon(int pin, int position_in_strip, int hex_leds, int strip_leds);
     void set_position(int pos);
     void clear();
