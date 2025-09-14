@@ -21,6 +21,8 @@
 #include <string>
 #include "connection.hpp"
 #include "hexagon.hpp"
+#include <memory>
+#include <fstream>
 #ifdef __AVR__
 #include <avr/power.h>  // Required for 16 MHz Adafruit Trinket
 #endif
@@ -39,20 +41,76 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 unsigned int localPort = 4210;  // Port für eingehende "Pings"
 
-Connection conn;
+Connection conn; // will be initialized via move in setup
 Hexagon hexagons[2];
 
+
+
+/**
+ * @brief Loads WiFi SSID and password from a config file using standard library functions.
+ *
+ * The config file should contain lines in the format:
+ * ssid:your-ssid
+ * password:your-password
+ *
+ * @param config_path Path to the config file.
+ * @return std::pair<std::string, std::string> containing SSID and password.
+ */
+std::pair<std::string, std::string> load_wifi_credentials(const std::string& config_path = "./config.txt") {
+  std::ifstream file(config_path);
+  if (!file.is_open()) {
+    std::cout << "Failed to open config file: " << config_path << std::endl;
+    return {"", ""};
+  }
+
+  std::string ssid;
+  std::string password;
+  std::string line;
+
+  // Parse each line for ssid and password
+  while (std::getline(file, line)) {
+    if (line.find("ssid:") == 0) {
+      ssid = line.substr(5);
+    } else if (line.find("password:") == 0) {
+      password = line.substr(9);
+    }
+  }
+
+  if (ssid.empty()) {
+    std::cerr << "SSID not found in config file." << std::endl;
+  }
+  if (password.empty()) {
+    std::cerr << "Password not found in config file." << std::endl;
+  }
+
+  return {ssid, password};
+}
 
 // setup() function -- runs once at startup --------------------------------
 void setup() {
   Serial.begin(9600);
   strip.fill(strip.Color(150, 150, 150), 0, LED_COUNT);
   strip.show();  // Update strip with new contents
-  Connection conn("your-ssid", "your-password", true, localPort);
-  Hexagon hex(LED_PIN, 1, 24, LED_COUNT); // Pin, Position in strip, LEDs in hexagon, LEDs in strip
-  Hexagon hex2(LED_PIN, 2, 24, LED_COUNT);
-  hexagons[0] = hex;
-  hexagons[1] = hex2;
+
+  std::pair<std::string, std::string> credentials = load_wifi_credentials();
+  std::string ssid = credentials.first;
+  std::string password = credentials.second;
+  if (ssid.empty() || password.empty()) {
+    Serial.println("WiFi credentials are missing. Please check config.txt.");
+    while (true) {
+      delay(1000); // Halt execution
+    }
+  }
+  
+  // Initialize objects in-place and move them to globals
+  Connection tempConn(ssid, password, true, localPort);
+  conn = std::move(tempConn);
+
+  Hexagon tempHex0(LED_PIN, 1, 24, LED_COUNT);
+  Hexagon tempHex1(LED_PIN, 2, 24, LED_COUNT);
+  hexagons[0] = std::move(tempHex0);
+  hexagons[1] = std::move(tempHex1);
+
   conn.create_listener();
 }
 
@@ -62,13 +120,13 @@ void setup() {
 // loop() function -- runs repeatedly as long as board is on ---------------
 void loop() {
   //Serial.println(ping_router());
-  std::string packet = conn.listen_for_packets();
-  if (!packet.empty()) {
-      Serial.print("Received packet: ");
-      Serial.println(packet.c_str());
-      Serial.println("Processing command...");
-      hexagons[0].set_all_pixels(150, 0, 0);
-      hexagons[1].set_all_pixels(0, 150, 0);
+  String packet = conn.listen_for_packets();
+  if (packet.length() > 0) {
+    Serial.print("Received packet: ");
+    Serial.println(packet);
+    Serial.println("Processing command...");
+    hexagons[0].set_all_pixels(150, 0, 0);
+    hexagons[1].set_all_pixels(0, 150, 0);
   }
 }
 
