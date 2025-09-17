@@ -76,6 +76,12 @@ IPAddress Connection::connect_to_wlan() {
     Serial.print(ssid.c_str());
     Serial.print(" with password ");
     Serial.print(password.c_str());
+    
+    // Set WiFi configuration for better stability
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
+    
     WiFi.begin(&ssid[0], &password[0]);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
@@ -106,12 +112,37 @@ void Connection::create_listener() {
 
 // Listen for packets and return as String (empty if none)
 String Connection::listen_for_packets() {
+    // Check WiFi status first
+    // TODO: AUSLAGERN!
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi disconnected! Attempting to reconnect...");
+        WiFi.begin(&ssid[0], &password[0]);
+        int attempts = 0;
+        while (WiFi.status() != WL_CONNECTED && attempts < 10) {
+            delay(500);
+            Serial.print(".");
+            attempts++;
+        }
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("\nReconnected to WiFi!");
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+        } else {
+            Serial.println("\nFailed to reconnect to WiFi");
+            return String();
+        }
+    }
+    
     int packetSize = listener.parsePacket();
     if (packetSize) {
+        Serial.print("Packet received with size: ");
+        Serial.println(packetSize);
         static char incomingPacket[512];
         int len = listener.read(incomingPacket, sizeof(incomingPacket) - 1);
         if (len > 0) {
             incomingPacket[len] = '\0';
+            Serial.print("Packet content: ");
+            Serial.println(incomingPacket);
             return String(incomingPacket);
         }
     }

@@ -5,10 +5,15 @@
 
 
 // Default constructor
+EventHandler::EventHandler() : hexagons(nullptr), hex_count(0), strip(nullptr) {}
+
+// Parameterized constructor
 EventHandler::EventHandler(Hexagon* hexagons, int hex_count, Adafruit_NeoPixel* strip)
     : hexagons(hexagons), hex_count(hex_count), strip(strip) {}
+
 // Destructor
 EventHandler::~EventHandler() {}
+
 // Move constructor
 EventHandler::EventHandler(EventHandler&& other) noexcept
     : hexagons(other.hexagons), hex_count(other.hex_count), strip(other.strip) {
@@ -16,6 +21,7 @@ EventHandler::EventHandler(EventHandler&& other) noexcept
     other.hex_count = 0;
     other.strip = nullptr;
 }
+
 // Move assignment
 EventHandler& EventHandler::operator=(EventHandler&& other) noexcept {
     if (this != &other) {
@@ -46,55 +52,65 @@ Event EventHandler::create_event_from_string(const std::string& event_str) {
     std::vector<std::string> tokens = parse_event_string(event_str);
     if (tokens.empty()) {
         return Event(); // Return a default event if parsing fails
-    }
-
-    // Determine event type based on the first token
-    if (tokens[0] == "CLEAR") {
-        return Event(Event::CLEAR);
-    } else if (tokens[0] == "POSITION") {
-        if (tokens.size() > 1) {
-            Event e(Event::POSITION);
-            e.add_param("hex_index", String(tokens[1].c_str()));
-            e.add_param("target", String(tokens[2].c_str()));
-            return e;
+    } else {
+        // Determine event type based on the first token
+        if (tokens[0] == "CLEAR") {
+            return Event(Event::CLEAR);
+        } else if (tokens[0] == "POSITION") {
+            if (tokens.size() > 2) {
+                Event e(Event::POSITION);
+                e.add_param("hex_index", String(tokens[1].c_str()));
+                e.add_param("target", String(tokens[2].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
+        } else if (tokens[0] == "COLORALL") {
+            if (tokens.size() > 3) {
+                Event e(Event::COLORALL);
+                e.add_param("r", String(tokens[1].c_str()));
+                e.add_param("g", String(tokens[2].c_str()));
+                e.add_param("b", String(tokens[3].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
+        } else if (tokens[0] == "COLORPIXEL") {
+            if (tokens.size() > 5) {
+                Event e(Event::COLORPIXEL);
+                e.add_param("hex_index", String(tokens[1].c_str()));
+                e.add_param("index", String(tokens[2].c_str()));
+                e.add_param("r", String(tokens[3].c_str()));
+                e.add_param("g", String(tokens[4].c_str()));
+                e.add_param("b", String(tokens[5].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
+        } else if (tokens[0] == "COLOREDGE") {
+            if (tokens.size() > 5) {
+                Event e(Event::COLOREDGE);
+                e.add_param("hex_index", String(tokens[1].c_str()));
+                e.add_param("edge", String(tokens[2].c_str()));
+                e.add_param("r", String(tokens[3].c_str()));
+                e.add_param("g", String(tokens[4].c_str()));
+                e.add_param("b", String(tokens[5].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
+        } else if (tokens[0] == "BRIGHTNESS") {
+            if (tokens.size() > 1) {
+                Event e(Event::BRIGHTNESS);
+                e.add_param("value", String(tokens[1].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
+        } else {
+            // Unknown event type; return raw data event
+            return Event(String(event_str.c_str()));
         }
-    } else if (tokens[0] == "COLORALL") {
-        if (tokens.size() > 1) {
-            Event e(Event::COLORALL);
-            e.add_param("r", String(tokens[1].c_str()));
-            e.add_param("g", String(tokens[2].c_str()));
-            e.add_param("b", String(tokens[3].c_str()));
-            return e;
-        }
-    } else if (tokens[0] == "COLORPIXEL") {
-        if (tokens.size() > 2) {
-            Event e(Event::COLORPIXEL);
-            e.add_param("hex_index", String(tokens[1].c_str()));
-            e.add_param("index", String(tokens[2].c_str()));
-            e.add_param("r", String(tokens[3].c_str()));
-            e.add_param("g", String(tokens[4].c_str()));
-            e.add_param("b", String(tokens[5].c_str()));
-            return e;
-        }
-    } else if (tokens[0] == "COLOREDGE") {
-        if (tokens.size() > 2) {
-            Event e(Event::COLOREDGE);
-            e.add_param("hex_index", String(tokens[1].c_str()));
-            e.add_param("edge", String(tokens[2].c_str()));
-            e.add_param("r", String(tokens[3].c_str()));
-            e.add_param("g", String(tokens[4].c_str()));
-            e.add_param("b", String(tokens[5].c_str()));
-            return e;
-        }
-    } else if (tokens[0] == "BRIGHTNESS") {
-        if (tokens.size() > 1) {
-            Event e(Event::BRIGHTNESS);
-            e.add_param("value", String(tokens[1].c_str()));
-            return e;
-        }
-    }else {
-        // Unknown event type; return raw data event
-        return Event(String(event_str.c_str()));
     }
 }
 

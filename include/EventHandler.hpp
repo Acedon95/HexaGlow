@@ -11,6 +11,8 @@ public:
     Hexagon* hexagons;
     int hex_count;
     Adafruit_NeoPixel* strip;
+    // Constructor
+    EventHandler();
     EventHandler(Hexagon* hexagons, int hex_count, Adafruit_NeoPixel* strip);
     ~EventHandler();
 

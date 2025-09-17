@@ -46,6 +46,7 @@ unsigned int localPort = 4210;  // Port für eingehende "Pings"
 
 Connection conn; // will be initialized via move in setup
 Hexagon hexagons[2];
+EventHandler eventHandler; // will be initialized in setup
 
 
 // setup() function -- runs once at startup --------------------------------
@@ -66,45 +67,42 @@ void setup() {
   Connection tempConn(true, localPort);
   conn = std::move(tempConn);
 
+  conn.create_listener();
+
+  /* Here we go with two hexagons, each with 18 leds, sharing the same strip
+    But I really want for the future a setup where we wait for the user to input the amount of hexagons
+    and the amount of leds per hexagon via a configuration file or a simple web interface.
+    And then create the hexagons dynamically via new Hexagon[hex_count]; and not via static array.
+    This will also require changes in EventHandler and Event to be able to adress the hexagons dynamically.
+  */
+  eventHandler = EventHandler(hexagons, 2, &strip);
+
   Hexagon tempHex0(&strip, 1, 18, LED_COUNT);
   Hexagon tempHex1(&strip, 2, 18, LED_COUNT);
   hexagons[0] = std::move(tempHex0);
   hexagons[1] = std::move(tempHex1);
 
-  conn.create_listener();
-  EventHandler eventHandler(hexagons, 2, &strip);
 
   Serial.println("Setup complete.");
   Serial.print("IP address: ");
   Serial.println(conn.ipAddress);
   Serial.print("Listening on port ");
   Serial.println(localPort);
-  hexagons[0].set_all_pixels(150, 0, 150);
-  hexagons[1].set_all_pixels(150, 150, 0);
+  hexagons[0].set_all_pixels(0, 150, 0);
+  hexagons[1].set_all_pixels(0, 150, 0);
   strip.show();
 }
 
-
-
-
 // loop() function -- runs repeatedly as long as board is on ---------------
 void loop() {
-  //Serial.println(ping_router());
-  hexagons[0].set_all_pixels(150, 0, 150);
-  hexagons[1].set_all_pixels(150, 150, 0);
-  strip.show();
-  delay(1000);
-  hexagons[1].set_all_pixels(0, 150, 0);
-  strip.show();
-  delay(1000);
   String packet = conn.listen_for_packets();
   if (packet.length() > 0) {
     Serial.print("Received packet: ");
     Serial.println(packet);
     Serial.println("Processing command...");
-    hexagons[0].set_all_pixels(150, 55, 0);
-    hexagons[1].set_all_pixels(0, 150, 0);
-    strip.show();
+    Event event = eventHandler.create_event_from_string(std::string(packet.c_str()));
+    eventHandler.process_event(event);
+    //strip.show();
   }
 }
 
