@@ -3,6 +3,11 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESP32Ping.h>
+#include <string>
+#include <utility>
+#include <iostream>
+#include <fstream>
+#include <SPIFFS.h>
 
 // Default constructor (client mode, default port 4210)
 Connection::Connection()
@@ -12,6 +17,17 @@ Connection::Connection()
 Connection::Connection(std::string ssid, std::string password, bool mode, unsigned int port)
     : ssid(std::move(ssid)), password(std::move(password)), mode(mode), listener(), localPort(port), ipAddress() {
     if (mode) {
+        load_wifi_credentials();
+        connect_to_wlan();
+    } else {
+        create_wlan();
+    }
+}
+
+Connection::Connection(bool mode, unsigned int port)
+    : ssid(""), password(""), mode(mode), listener(), localPort(port), ipAddress() {
+    if (mode) {
+        load_wifi_credentials();
         connect_to_wlan();
     } else {
         create_wlan();
@@ -45,8 +61,8 @@ Connection &Connection::operator=(Connection &&other) noexcept
         localPort = other.localPort;
         ipAddress = other.ipAddress;
         // reset other's pointers
-        other.ssid = nullptr;
-        other.password = nullptr;
+        other.ssid.clear();
+        other.password.clear();
     }
     return *this;
 }
@@ -56,12 +72,21 @@ IPAddress Connection::connect_to_wlan() {
     if (ssid.empty() || password.empty()) {
         return IPAddress();
     }
+    Serial.print("Connecting to ");
+    Serial.print(ssid.c_str());
+    Serial.print(" with password ");
+    Serial.print(password.c_str());
     WiFi.begin(&ssid[0], &password[0]);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print('.');
     }
     ipAddress = WiFi.localIP();
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(ssid.c_str());
+    Serial.print("IP address: "); 
+    Serial.println(ipAddress);
     return ipAddress;
 }
 
@@ -99,4 +124,53 @@ String Connection::ping_remote(IPAddress remote_ip) {
         return String("success");
     }
     return String("failed");
+}
+
+
+/**
+ * @brief Loads WiFi SSID and password from a config file using standard library functions.
+ *
+ * The config file should contain lines in the format:
+ * ssid:your-ssid
+ * password:your-password
+ *
+ * @param config_path Path to the config file.
+ * @return std::pair<std::string, std::string> containing SSID and password.
+ */
+std::pair<std::string, std::string> Connection::load_wifi_credentials(const std::string& config_path) {
+    String null = "Null";
+    File file = SPIFFS.open(config_path.c_str(), "r");
+    if (!file) {
+        Serial.println("Failed to open file");
+        return {null.c_str(), null.c_str()};
+    }
+
+    while (file.available()) {
+        String line = file.readStringUntil('\n');
+        if (line.startsWith("ssid:")) {
+            String raw_ssid = line.substring(5);
+            raw_ssid.replace(" ", "");
+            raw_ssid.replace("\n", "");
+            raw_ssid.replace("\r", "");
+            raw_ssid.replace("\t", "");
+            ssid = raw_ssid.c_str();
+        } else if (line.startsWith("password:")) {
+            String raw_password = line.substring(9);
+            raw_password.replace(" ", "");
+            raw_password.replace("\n", "");
+            raw_password.replace("\r", "");
+            raw_password.replace("\t", "");
+            password = raw_password.c_str();
+        }
+    }
+    file.close();
+
+    if (ssid.empty()) {
+        Serial.println("SSID not found in config file.");
+    }
+    if (password.empty()) {
+        Serial.println("Password not found in config file.");
+    }
+
+    return {ssid, password};
 }

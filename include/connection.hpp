@@ -20,12 +20,13 @@ class Connection {
     // Constructor
         Connection();
         Connection(std::string ssid, std::string password, bool mode, unsigned int port = 4210);
+        Connection(bool mode, unsigned int port);
 
-    // Movable but not copyable
-    Connection(Connection&& other) noexcept;
-    Connection& operator=(Connection&& other) noexcept;
-    Connection(const Connection&) = delete;
-    Connection& operator=(const Connection&) = delete;
+        // Movable but not copyable
+        Connection(Connection&& other) noexcept;
+        Connection& operator=(Connection&& other) noexcept;
+        Connection(const Connection&) = delete;
+        Connection& operator=(const Connection&) = delete;
 
         // Destructor
         ~Connection();
@@ -35,4 +36,6 @@ class Connection {
         void create_listener();
         String listen_for_packets();
         String ping_remote(IPAddress remote_ip = IPAddress(192,168,0,1));
+        std::pair<std::string, std::string> load_wifi_credentials(const std::string& config_path = "/.config") ;
+
 };
