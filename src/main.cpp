@@ -21,6 +21,8 @@
 #include <string>
 #include "connection.hpp"
 #include "hexagon.hpp"
+#include "EventHandler.hpp"
+#include "Event.hpp"
 #include <memory>
 #include <SPIFFS.h>
 #include <fstream>
@@ -70,6 +72,7 @@ void setup() {
   hexagons[1] = std::move(tempHex1);
 
   conn.create_listener();
+  EventHandler eventHandler(hexagons, 2, &strip);
 
   Serial.println("Setup complete.");
   Serial.print("IP address: ");
