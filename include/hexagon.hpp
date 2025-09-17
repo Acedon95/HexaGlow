@@ -12,6 +12,8 @@ public:
 
     Hexagon();
     Hexagon(int pin, int position_in_strip, int hex_leds, int strip_leds);
+    Hexagon(Adafruit_NeoPixel* shared_strip, int position_in_strip, int hex_leds, int strip_leds);
+
     ~Hexagon();
 
     // Movable but not copyable

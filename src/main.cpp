@@ -56,14 +56,16 @@ void setup() {
       return;
   }
 
+  strip.begin();
   strip.fill(strip.Color(150, 150, 150), 0, LED_COUNT);
   strip.show();  // Update strip with new contents
+
   // Initialize objects in-place and move them to globals
   Connection tempConn(true, localPort);
   conn = std::move(tempConn);
 
-  Hexagon tempHex0(LED_PIN, 1, 18, LED_COUNT);
-  Hexagon tempHex1(LED_PIN, 2, 18, LED_COUNT);
+  Hexagon tempHex0(&strip, 1, 18, LED_COUNT);
+  Hexagon tempHex1(&strip, 2, 18, LED_COUNT);
   hexagons[0] = std::move(tempHex0);
   hexagons[1] = std::move(tempHex1);
 
@@ -75,8 +77,8 @@ void setup() {
   Serial.print("Listening on port ");
   Serial.println(localPort);
   hexagons[0].set_all_pixels(150, 0, 150);
-  delay(500);
   hexagons[1].set_all_pixels(150, 150, 0);
+  strip.show();
 }
 
 
@@ -85,11 +87,13 @@ void setup() {
 // loop() function -- runs repeatedly as long as board is on ---------------
 void loop() {
   //Serial.println(ping_router());
-    hexagons[0].set_all_pixels(150, 0, 150);
-  delay(1000);
+  hexagons[0].set_all_pixels(150, 0, 150);
   hexagons[1].set_all_pixels(150, 150, 0);
+  strip.show();
   delay(1000);
-  
+  hexagons[1].set_all_pixels(0, 150, 0);
+  strip.show();
+  delay(1000);
   String packet = conn.listen_for_packets();
   if (packet.length() > 0) {
     Serial.print("Received packet: ");
@@ -97,6 +101,7 @@ void loop() {
     Serial.println("Processing command...");
     hexagons[0].set_all_pixels(150, 55, 0);
     hexagons[1].set_all_pixels(0, 150, 0);
+    strip.show();
   }
 }
 
