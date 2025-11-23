@@ -37,12 +37,31 @@ EventHandler& EventHandler::operator=(EventHandler&& other) noexcept {
 }
 
 std::vector<std::string> parse_event_string(const std::string& event_str) {
-    // Simple parser to split by spaces; can be enhanced as needed
+    // Trim the entire input string first to remove leading/trailing garbage
+    std::string trimmed = event_str;
+    // Remove all non-printable characters and whitespace from start
+    size_t start = 0;
+    while (start < trimmed.length() && (trimmed[start] < 33 || trimmed[start] > 126)) {
+        start++;
+    }
+    // Remove all non-printable characters and whitespace from end
+    size_t end = trimmed.length();
+    while (end > start && (trimmed[end-1] < 33 || trimmed[end-1] > 126)) {
+        end--;
+    }
+    trimmed = trimmed.substr(start, end - start);
+    
+    // Now parse the cleaned string
     std::vector<std::string> tokens;
-    std::stringstream ss(event_str);
+    std::stringstream ss(trimmed);
     std::string token;
     while (std::getline(ss, token, ' ')) {
-        tokens.push_back(token);
+        // Trim whitespace and control characters from each token
+        token.erase(0, token.find_first_not_of(" \t\r\n"));
+        token.erase(token.find_last_not_of(" \t\r\n") + 1);
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
     }
     return tokens;
 }
@@ -50,6 +69,15 @@ std::vector<std::string> parse_event_string(const std::string& event_str) {
 Event EventHandler::create_event_from_string(const std::string& event_str) {
     // Split the string and determine event type
     std::vector<std::string> tokens = parse_event_string(event_str);
+    Serial.print("Creating event from string: ");
+    Serial.println(event_str.c_str());
+    Serial.print("Tokens: ");
+    for (const auto& t : tokens) {
+        Serial.print(t.c_str());
+        Serial.print(" | ");
+    }
+    Serial.println();
+
     if (tokens.empty()) {
         return Event(); // Return a default event if parsing fails
     } else {
@@ -109,6 +137,7 @@ Event EventHandler::create_event_from_string(const std::string& event_str) {
             }
         } else {
             // Unknown event type; return raw data event
+            Serial.println("In EventHandler: Creating unknown event type");
             return Event(String(event_str.c_str()));
         }
     }
@@ -116,6 +145,8 @@ Event EventHandler::create_event_from_string(const std::string& event_str) {
 
 void EventHandler::process_event(Event event) {
     // Process event based on its type and parameters
+    Serial.print("EventHandler: Processing event of type ");
+    Serial.println(event.type);
     switch (event.type) {
         case Event::POSITION:
             // Handle position event
@@ -170,6 +201,7 @@ void EventHandler::process_event(Event event) {
             break;
         case Event::CLEAR:
             // Handle clear event
+            Serial.println("In EventHandler: Processing CLEAR event");
             for (int i = 0; i < hex_count; ++i) {
                 hexagons[i].clear();
             }
@@ -177,12 +209,12 @@ void EventHandler::process_event(Event event) {
         default:
             // Unknown event type
             // Maybe built in that each hexagon flashes red for a second and then returns to previous state?
+            Serial.println("In EventHandler: Processing unknown event type");
             for (int i = 0; i < hex_count; ++i) {
                 hexagons[i].set_all_pixels(150, 0, 0); // Flash red
-                delay(1000);
+                delay(5000);
             }
             strip->show();
-
             for (int i = 0; i < hex_count; ++i) {
                 hexagons[i].clear(); // Clear after flash
             }
