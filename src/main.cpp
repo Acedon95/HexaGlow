@@ -34,7 +34,7 @@
 #define LED_PIN 4
 
 // How many LEDs are attached to the Arduino?
-#define LED_COUNT 36
+#define LED_COUNT 126
 
 // Declare our NeoPixel strip object:
 // Argument 1 = Number of pixels in NeoPixel strip
@@ -45,8 +45,18 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 unsigned int localPort = 4210;  // Port für eingehende "Pings"
 
 Connection conn; // will be initialized via move in setup
-Hexagon hexagons[2];
+Hexagon hexagons[7];
 EventHandler eventHandler; // will be initialized in setup
+
+
+void boot(){
+  // Function for led pattern on boot up, one hex after another lighting up green
+  for(int i = 0; i < 7; i++){
+    hexagons[i].set_all_pixels(0, 150, 0);
+    strip.show();
+    delay(200);
+  }
+}
 
 
 // setup() function -- runs once at startup --------------------------------
@@ -75,22 +85,31 @@ void setup() {
     And then create the hexagons dynamically via new Hexagon[hex_count]; and not via static array.
     This will also require changes in EventHandler and Event to be able to adress the hexagons dynamically.
   */
-  eventHandler = EventHandler(hexagons, 2, &strip);
+  eventHandler = EventHandler(hexagons, 9, &strip);
 
   Hexagon tempHex0(&strip, 1, 18, LED_COUNT);
   Hexagon tempHex1(&strip, 2, 18, LED_COUNT);
+  Hexagon tempHex2(&strip, 3, 18, LED_COUNT);
+  Hexagon tempHex3(&strip, 4, 18, LED_COUNT);
+  Hexagon tempHex4(&strip, 5, 18, LED_COUNT);
+  Hexagon tempHex5(&strip, 6, 18, LED_COUNT);
+  Hexagon tempHex6(&strip, 7, 18, LED_COUNT);
+
   hexagons[0] = std::move(tempHex0);
   hexagons[1] = std::move(tempHex1);
-
+  hexagons[2] = std::move(tempHex2);
+  hexagons[3] = std::move(tempHex3);
+  hexagons[4] = std::move(tempHex4);
+  hexagons[5] = std::move(tempHex5);
+  hexagons[6] = std::move(tempHex6);
 
   Serial.println("Setup complete.");
   Serial.print("IP address: ");
   Serial.println(conn.ipAddress);
   Serial.print("Listening on port ");
   Serial.println(localPort);
-  hexagons[0].set_all_pixels(0, 150, 0);
-  hexagons[1].set_all_pixels(0, 150, 0);
-  strip.show();
+  boot();
+  //strip.show();
 }
 
 // loop() function -- runs repeatedly as long as board is on ---------------
