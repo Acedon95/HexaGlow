@@ -115,6 +115,17 @@ Event EventHandler::create_event_from_string(const std::string& event_str) {
             } else {
                 return Event(); // Not enough tokens, return default event
             }
+        } else if (tokens[0] == "COLORHEX") {
+            if (tokens.size() > 4) {
+                Event e(Event::COLORHEX);
+                e.add_param("hex_index", String(tokens[1].c_str()));
+                e.add_param("r", String(tokens[2].c_str()));
+                e.add_param("g", String(tokens[3].c_str()));
+                e.add_param("b", String(tokens[4].c_str()));
+                return e;
+            } else {
+                return Event(); // Not enough tokens, return default event
+            }
         } else if (tokens[0] == "COLOREDGE") {
             if (tokens.size() > 5) {
                 Event e(Event::COLOREDGE);
@@ -174,6 +185,19 @@ void EventHandler::process_event(Event event) {
                 if (hex_index >= 0 && hex_index < hex_count) {
                     hexagons[hex_index].set_pixel(pixel_index, r, g, b);
                     strip->show(); // Update the strip after changing the pixel
+                }
+            }
+            break;
+        case Event::COLORHEX:
+            // Handle color hex event by setting all pixels of a single hexagon
+            if (event.has_param("hex_index") && event.has_param("r") && event.has_param("g") && event.has_param("b")) {
+                int hex_index = event.get_param("hex_index").toInt() - 1; // Convert to 0-based index
+                int r = event.get_param("r").toInt();
+                int g = event.get_param("g").toInt();
+                int b = event.get_param("b").toInt();
+                if (hex_index >= 0 && hex_index < hex_count) {
+                    hexagons[hex_index].set_all_pixels(r, g, b);
+                    strip->show(); // Update the strip after changing the hexagon
                 }
             }
             break;
