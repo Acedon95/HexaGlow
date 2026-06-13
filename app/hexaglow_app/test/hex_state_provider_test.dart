@@ -36,6 +36,38 @@ void main() {
     });
   });
 
+  group('edge rotation', () {
+    test('firmwareEdge maps visual slot 0 to the edge rotation offset', () async {
+      final provider = HexStateProvider();
+      await provider.init();
+
+      expect(provider.edgeRotationFor(1), 0);
+      expect(provider.firmwareEdge(1, 0), 0);
+      expect(provider.firmwareEdge(1, 5), 5);
+
+      await provider.rotateEdges(1);
+      expect(provider.edgeRotationFor(1), 1);
+      expect(provider.firmwareEdge(1, 0), 1);
+      expect(provider.firmwareEdge(1, 5), 0);
+
+      for (var i = 0; i < 5; i++) {
+        await provider.rotateEdges(1);
+      }
+      expect(provider.edgeRotationFor(1), 0);
+    });
+
+    test('edge rotation is persisted across instances', () async {
+      final provider = HexStateProvider();
+      await provider.init();
+      await provider.rotateEdges(3);
+      await provider.rotateEdges(3);
+
+      final reloaded = HexStateProvider();
+      await reloaded.init();
+      expect(reloaded.edgeRotationFor(3), 2);
+    });
+  });
+
   group('presets', () {
     test('save, apply, and delete a preset', () async {
       final provider = HexStateProvider();
@@ -53,7 +85,7 @@ void main() {
       await provider.sendBrightness(0);
 
       await provider.applyPreset(provider.presets.first);
-      expect(provider.hexStateFor(1).wholeColor, Colors.red);
+      expect(provider.hexStateFor(1).edgeColors, everyElement(Colors.red));
       expect(provider.hexStateFor(2).edgeColors[3], Colors.blue);
       expect(provider.brightness, 100);
 

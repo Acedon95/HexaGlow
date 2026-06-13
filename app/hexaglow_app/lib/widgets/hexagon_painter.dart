@@ -13,12 +13,18 @@ import '../utils/hex_geometry.dart';
 /// its center, so the on-screen orientation can match how the physical
 /// module is actually mounted (e.g. flat-top vs. pointy-top). The hexagon
 /// index label in the center is kept upright.
+///
+/// [edgeRotation] (0-5) remaps which firmware edge color is drawn at each
+/// visual edge slot (slot `i` shows `edgeColors[(i + edgeRotation) % 6]`),
+/// so edge slot 0 can be made to line up with whichever physical edge is
+/// wired there, independently of [rotation].
 class HexagonPainter extends CustomPainter {
   HexagonPainter({
     required this.wholeColor,
     required this.edgeColors,
     required this.hexIndex,
     this.rotation = 0,
+    this.edgeRotation = 0,
     this.selected = false,
     this.showEdgeLabels = false,
   }) : assert(edgeColors.length == 6);
@@ -27,6 +33,7 @@ class HexagonPainter extends CustomPainter {
   final List<Color> edgeColors;
   final int hexIndex;
   final int rotation;
+  final int edgeRotation;
   final bool selected;
   final bool showEdgeLabels;
 
@@ -51,7 +58,7 @@ class HexagonPainter extends CustomPainter {
         corners[i],
         corners[(i + 1) % 6],
         Paint()
-          ..color = edgeColors[i]
+          ..color = edgeColors[(i + edgeRotation) % 6]
           ..strokeWidth = edgeStrokeWidth
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,

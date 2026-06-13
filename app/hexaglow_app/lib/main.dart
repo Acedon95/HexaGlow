@@ -23,7 +23,19 @@ class HexaGlowApp extends StatelessWidget {
             seedColor: Colors.deepPurple,
             brightness: Brightness.dark,
           ),
+          scaffoldBackgroundColor: Colors.transparent,
           useMaterial3: true,
+        ),
+        builder: (context, child) => Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/hexaglow_background_asset.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+            if (child != null) child,
+          ],
         ),
         home: const _AppRoot(),
       ),

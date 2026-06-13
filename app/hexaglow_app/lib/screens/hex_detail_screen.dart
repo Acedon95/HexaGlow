@@ -34,6 +34,7 @@ class _HexDetailScreenState extends State<HexDetailScreen> {
     final provider = context.watch<HexStateProvider>();
     final state = provider.hexStateFor(widget.hexIndex);
     final rotation = provider.rotationFor(widget.hexIndex);
+    final edgeRotation = provider.edgeRotationFor(widget.hexIndex);
 
     return Scaffold(
       appBar: AppBar(title: Text('Hexagon ${widget.hexIndex}')),
@@ -46,14 +47,15 @@ class _HexDetailScreenState extends State<HexDetailScreen> {
               size: 180,
               selected: true,
               rotation: rotation,
+              edgeRotation: edgeRotation,
             ),
           ),
           const SizedBox(height: 8),
           Center(
             child: TextButton.icon(
               icon: const Icon(Icons.rotate_right),
-              label: Text('Rotate (${rotation * 30}°)'),
-              onPressed: () => provider.rotateHex(widget.hexIndex),
+              label: Text('Rotate edges (${edgeRotation * 60}°)'),
+              onPressed: () => provider.rotateEdges(widget.hexIndex),
             ),
           ),
           const SizedBox(height: 16),
@@ -79,24 +81,28 @@ class _HexDetailScreenState extends State<HexDetailScreen> {
           const SizedBox(height: 24),
           Text('Edges', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          for (var edge = 0; edge < 6; edge++)
+          for (var visualSlot = 0; visualSlot < 6; visualSlot++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(backgroundColor: state.edgeColors[edge]),
-                title: Text('Edge $edge'),
+                leading: CircleAvatar(
+                  backgroundColor:
+                      state.edgeColors[provider.firmwareEdge(widget.hexIndex, visualSlot)],
+                ),
+                title: Text('Edge $visualSlot'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
+                  final firmwareEdge = provider.firmwareEdge(widget.hexIndex, visualSlot);
                   final color = await showColorWheelDialog(
                     context,
-                    initialColor: state.edgeColors[edge],
-                    title: 'Hexagon ${widget.hexIndex}, edge $edge',
+                    initialColor: state.edgeColors[firmwareEdge],
+                    title: 'Hexagon ${widget.hexIndex}, edge $visualSlot',
                   );
                   if (color != null) {
-                    await provider.sendColorEdge(widget.hexIndex, edge, color);
+                    await provider.sendColorEdge(widget.hexIndex, firmwareEdge, color);
                     setState(() {
-                      for (var p = edge * 3; p < edge * 3 + 3; p++) {
+                      for (var p = firmwareEdge * 3; p < firmwareEdge * 3 + 3; p++) {
                         _pixelColors[p] = color;
                       }
                     });

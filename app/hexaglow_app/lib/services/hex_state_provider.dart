@@ -40,6 +40,13 @@ class HexStateProvider extends ChangeNotifier {
   AppSettings settings = AppSettings.defaultSettings;
   int brightness = 255;
   List<ColorPreset> presets = [];
+  bool isApplyingPreset = false;
+
+  /// Delay between UDP commands sent while applying a preset. Each command
+  /// triggers a `strip->show()` on the ESP32 (~126 pixels); sending faster
+  /// than this overflows its UDP receive buffer and drops packets, so only
+  /// some hexagons/edges would update.
+  static const _presetCommandDelay = Duration(milliseconds: 30);
 
   Future<void> init() async {
     final savedLayout = await _layoutStorage.loadLayout();
@@ -74,6 +81,27 @@ class HexStateProvider extends ChangeNotifier {
     await persistLayout();
   }
 
+  /// Number of 60-degree clockwise steps applied to [hexIndex]'s edge
+  /// indices, see [HexPosition.edgeRotation].
+  int edgeRotationFor(int hexIndex) =>
+      layout.firstWhere((p) => p.hexIndex == hexIndex).edgeRotation;
+
+  /// Maps a fixed on-screen edge slot (0 = top-right, going clockwise,
+  /// before [rotationFor] is applied) to the firmware edge index for
+  /// [hexIndex], taking its [edgeRotationFor] into account.
+  int firmwareEdge(int hexIndex, int visualSlot) =>
+      (visualSlot + edgeRotationFor(hexIndex)) % 6;
+
+  /// Rotates [hexIndex]'s edge mapping by one more 60-degree step (wrapping
+  /// 0-5) and persists it.
+  Future<void> rotateEdges(int hexIndex) async {
+    final i = layout.indexWhere((p) => p.hexIndex == hexIndex);
+    if (i == -1) return;
+    layout[i] = layout[i].copyWith(edgeRotation: (layout[i].edgeRotation + 1) % 6);
+    notifyListeners();
+    await persistLayout();
+  }
+
   /// Live-updates a hexagon's position during a drag without touching disk.
   void updateLayoutDelta(int hexIndex, Offset delta) {
     final i = layout.indexWhere((p) => p.hexIndex == hexIndex);
@@ -90,14 +118,14 @@ class HexStateProvider extends ChangeNotifier {
 
   Future<void> sendColorAll(Color color) async {
     for (final state in hexStates) {
-      state.setWholeColor(color);
+      state.setAllEdgeColors(color);
     }
     notifyListeners();
     await udp.sendColorAll(color.r8, color.g8, color.b8);
   }
 
   Future<void> sendColorHex(int hexIndex, Color color) async {
-    hexStateFor(hexIndex).setWholeColor(color);
+    hexStateFor(hexIndex).setAllEdgeColors(color);
     notifyListeners();
     await udp.sendColorHex(hexIndex, color.r8, color.g8, color.b8);
   }
@@ -155,27 +183,38 @@ class HexStateProvider extends ChangeNotifier {
   }
 
   /// Restores all 7 hexagons' colors and the global brightness from [preset].
+  ///
+  /// While a preset is being applied, further calls are ignored (e.g. if the
+  /// user spams the load button) so overlapping UDP bursts can't interleave
+  /// and leave some hexagons only partially updated.
   Future<void> applyPreset(ColorPreset preset) async {
+    if (isApplyingPreset) return;
+    isApplyingPreset = true;
+
     for (var i = 0; i < kHexCount; i++) {
-      final hexIndex = i + 1;
-      final whole = preset.wholeColors[i];
-      final edges = preset.edgeColors[i];
-
-      final state = hexStateFor(hexIndex);
-      state.wholeColor = whole;
+      final state = hexStateFor(i + 1);
+      state.wholeColor = preset.wholeColors[i];
       for (var e = 0; e < 6; e++) {
-        state.edgeColors[e] = edges[e];
-      }
-
-      await udp.sendColorHex(hexIndex, whole.r8, whole.g8, whole.b8);
-      for (var e = 0; e < 6; e++) {
-        await udp.sendColorEdge(hexIndex, e, edges[e].r8, edges[e].g8, edges[e].b8);
+        state.edgeColors[e] = preset.edgeColors[i][e];
       }
     }
-
     brightness = preset.brightness;
-    await udp.sendBrightness(brightness);
     notifyListeners();
+
+    try {
+      for (var i = 0; i < kHexCount; i++) {
+        final hexIndex = i + 1;
+        final edges = preset.edgeColors[i];
+        for (var e = 0; e < 6; e++) {
+          await udp.sendColorEdge(hexIndex, e, edges[e].r8, edges[e].g8, edges[e].b8);
+          await Future.delayed(_presetCommandDelay);
+        }
+      }
+      await udp.sendBrightness(brightness);
+    } finally {
+      isApplyingPreset = false;
+      notifyListeners();
+    }
   }
 
   Future<void> deletePreset(String name) async {

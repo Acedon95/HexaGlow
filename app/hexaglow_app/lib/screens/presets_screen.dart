@@ -14,7 +14,22 @@ class PresetsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Color Presets')),
-      body: provider.presets.isEmpty
+      body: Column(
+        children: [
+          if (provider.isApplyingPreset) const LinearProgressIndicator(),
+          Expanded(child: _buildList(context, provider)),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.save),
+        label: const Text('Save current'),
+        onPressed: () => _saveCurrent(context, provider),
+      ),
+    );
+  }
+
+  Widget _buildList(BuildContext context, HexStateProvider provider) {
+    return provider.presets.isEmpty
           ? const Center(child: Text('No presets saved yet.'))
           : ListView.builder(
               itemCount: provider.presets.length,
@@ -28,24 +43,22 @@ class PresetsScreen extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.play_arrow),
                         tooltip: 'Load',
-                        onPressed: () => provider.applyPreset(preset),
+                        onPressed: provider.isApplyingPreset
+                            ? null
+                            : () => provider.applyPreset(preset),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline),
                         tooltip: 'Delete',
-                        onPressed: () => _confirmDelete(context, provider, preset.name),
+                        onPressed: provider.isApplyingPreset
+                            ? null
+                            : () => _confirmDelete(context, provider, preset.name),
                       ),
                     ],
                   ),
                 );
               },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.save),
-        label: const Text('Save current'),
-        onPressed: () => _saveCurrent(context, provider),
-      ),
-    );
+            );
   }
 
   Future<void> _saveCurrent(BuildContext context, HexStateProvider provider) async {

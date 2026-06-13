@@ -107,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         state: provider.hexStateFor(pos.hexIndex),
                         size: kHexBoxSize,
                         rotation: pos.rotation,
+                        edgeRotation: pos.edgeRotation,
                         showEdgeLabels: _editMode,
                       ),
                     ),

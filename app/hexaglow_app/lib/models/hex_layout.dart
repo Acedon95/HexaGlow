@@ -17,19 +17,30 @@ class HexPosition {
   /// unaffected.
   final int rotation;
 
+  /// Number of 60-degree clockwise steps applied to this hexagon's edge
+  /// indices before they're sent to the firmware (0-5).
+  ///
+  /// The UI always draws "edge 0" at the top-right of the hexagon (before
+  /// [rotation] is applied); this offset lets that fixed visual slot map to
+  /// whichever physical edge is actually wired there, to account for
+  /// differing cable orientations.
+  final int edgeRotation;
+
   const HexPosition({
     required this.hexIndex,
     required this.dx,
     required this.dy,
     this.rotation = 0,
+    this.edgeRotation = 0,
   });
 
-  HexPosition copyWith({double? dx, double? dy, int? rotation}) {
+  HexPosition copyWith({double? dx, double? dy, int? rotation, int? edgeRotation}) {
     return HexPosition(
       hexIndex: hexIndex,
       dx: dx ?? this.dx,
       dy: dy ?? this.dy,
       rotation: rotation ?? this.rotation,
+      edgeRotation: edgeRotation ?? this.edgeRotation,
     );
   }
 
@@ -38,6 +49,7 @@ class HexPosition {
         'dx': dx,
         'dy': dy,
         'rotation': rotation,
+        'edgeRotation': edgeRotation,
       };
 
   factory HexPosition.fromJson(Map<String, dynamic> json) => HexPosition(
@@ -45,5 +57,6 @@ class HexPosition {
         dx: (json['dx'] as num).toDouble(),
         dy: (json['dy'] as num).toDouble(),
         rotation: (json['rotation'] as int?) ?? 0,
+        edgeRotation: (json['edgeRotation'] as int?) ?? 0,
       );
 }

@@ -135,14 +135,10 @@ String Connection::listen_for_packets() {
     
     int packetSize = listener.parsePacket();
     if (packetSize) {
-        Serial.print("Packet received with size: ");
-        Serial.println(packetSize);
         static char incomingPacket[512];
         int len = listener.read(incomingPacket, sizeof(incomingPacket) - 1);
         if (len > 0) {
             incomingPacket[len] = '\0';
-            Serial.print("Packet content: ");
-            Serial.println(incomingPacket);
             return String(incomingPacket);
         }
     }

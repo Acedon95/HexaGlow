@@ -14,10 +14,18 @@ class HexState {
       : wholeColor = initialColor ?? Colors.black,
         edgeColors = List.generate(6, (_) => initialColor ?? Colors.black);
 
-  /// Sets the whole-hexagon color, which also overwrites all 6 edge colors
-  /// since `COLORHEX`/`COLORALL` set every pixel of the hexagon.
+  /// Sets the central fill color and all 6 edge colors, used when every
+  /// pixel of the hexagon is being set to the same color (e.g. [clear]).
   void setWholeColor(Color color) {
     wholeColor = color;
+    for (var i = 0; i < edgeColors.length; i++) {
+      edgeColors[i] = color;
+    }
+  }
+
+  /// Sets all 6 edge colors without touching the central fill color, used
+  /// for `COLORALL`/`COLORHEX` which address the edge LEDs.
+  void setAllEdgeColors(Color color) {
     for (var i = 0; i < edgeColors.length; i++) {
       edgeColors[i] = color;
     }

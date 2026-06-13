@@ -69,14 +69,6 @@ std::vector<std::string> parse_event_string(const std::string& event_str) {
 Event EventHandler::create_event_from_string(const std::string& event_str) {
     // Split the string and determine event type
     std::vector<std::string> tokens = parse_event_string(event_str);
-    Serial.print("Creating event from string: ");
-    Serial.println(event_str.c_str());
-    Serial.print("Tokens: ");
-    for (const auto& t : tokens) {
-        Serial.print(t.c_str());
-        Serial.print(" | ");
-    }
-    Serial.println();
 
     if (tokens.empty()) {
         return Event(); // Return a default event if parsing fails
@@ -156,8 +148,6 @@ Event EventHandler::create_event_from_string(const std::string& event_str) {
 
 void EventHandler::process_event(Event event) {
     // Process event based on its type and parameters
-    Serial.print("EventHandler: Processing event of type ");
-    Serial.println(event.type);
     switch (event.type) {
         case Event::POSITION:
             // Handle position event
@@ -225,10 +215,10 @@ void EventHandler::process_event(Event event) {
             break;
         case Event::CLEAR:
             // Handle clear event
-            Serial.println("In EventHandler: Processing CLEAR event");
             for (int i = 0; i < hex_count; ++i) {
                 hexagons[i].clear();
             }
+            strip->show(); // Update the strip after clearing all hexagons
             break;
         default:
             // Unknown event type

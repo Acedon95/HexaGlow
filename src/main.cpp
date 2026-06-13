@@ -61,7 +61,7 @@ void boot(){
 
 // setup() function -- runs once at startup --------------------------------
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // Initialize SPIFFS
   if (!SPIFFS.begin(true)) {
@@ -116,9 +116,6 @@ void setup() {
 void loop() {
   String packet = conn.listen_for_packets();
   if (packet.length() > 0) {
-    Serial.print("Received packet: ");
-    Serial.println(packet);
-    Serial.println("Processing command...");
     Event event = eventHandler.create_event_from_string(std::string(packet.c_str()));
     eventHandler.process_event(event);
     //strip.show();
