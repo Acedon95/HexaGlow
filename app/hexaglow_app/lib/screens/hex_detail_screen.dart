@@ -33,6 +33,7 @@ class _HexDetailScreenState extends State<HexDetailScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<HexStateProvider>();
     final state = provider.hexStateFor(widget.hexIndex);
+    final rotation = provider.rotationFor(widget.hexIndex);
 
     return Scaffold(
       appBar: AppBar(title: Text('Hexagon ${widget.hexIndex}')),
@@ -40,9 +41,22 @@ class _HexDetailScreenState extends State<HexDetailScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Center(
-            child: HexagonWidget(state: state, size: 180, selected: true),
+            child: HexagonWidget(
+              state: state,
+              size: 180,
+              selected: true,
+              rotation: rotation,
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              icon: const Icon(Icons.rotate_right),
+              label: Text('Rotate (${rotation * 30}°)'),
+              onPressed: () => provider.rotateHex(widget.hexIndex),
+            ),
+          ),
+          const SizedBox(height: 16),
           ElevatedButton.icon(
             icon: const Icon(Icons.palette),
             label: const Text('Set whole hexagon color'),

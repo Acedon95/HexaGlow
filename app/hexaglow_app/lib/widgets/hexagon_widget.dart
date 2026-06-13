@@ -14,11 +14,15 @@ class HexagonWidget extends StatelessWidget {
     required this.state,
     this.size = 100,
     this.selected = false,
+    this.rotation = 0,
+    this.showEdgeLabels = false,
   });
 
   final HexState state;
   final double size;
   final bool selected;
+  final int rotation;
+  final bool showEdgeLabels;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +34,9 @@ class HexagonWidget extends StatelessWidget {
           wholeColor: state.wholeColor,
           edgeColors: state.edgeColors,
           hexIndex: state.hexIndex,
+          rotation: rotation,
           selected: selected,
+          showEdgeLabels: showEdgeLabels,
         ),
       ),
     );

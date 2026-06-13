@@ -8,13 +8,28 @@ class HexPosition {
   final double dx;
   final double dy;
 
-  const HexPosition({required this.hexIndex, required this.dx, required this.dy});
+  /// Number of 30-degree clockwise visual rotation steps applied to this
+  /// hexagon's graphic (outline, fill, edge colors, edge labels) on screen
+  /// (0-11).
+  ///
+  /// This is purely cosmetic and lets the on-screen orientation match how
+  /// the physical module is actually mounted; firmware edge indices are
+  /// unaffected.
+  final int rotation;
 
-  HexPosition copyWith({double? dx, double? dy}) {
+  const HexPosition({
+    required this.hexIndex,
+    required this.dx,
+    required this.dy,
+    this.rotation = 0,
+  });
+
+  HexPosition copyWith({double? dx, double? dy, int? rotation}) {
     return HexPosition(
       hexIndex: hexIndex,
       dx: dx ?? this.dx,
       dy: dy ?? this.dy,
+      rotation: rotation ?? this.rotation,
     );
   }
 
@@ -22,11 +37,13 @@ class HexPosition {
         'hexIndex': hexIndex,
         'dx': dx,
         'dy': dy,
+        'rotation': rotation,
       };
 
   factory HexPosition.fromJson(Map<String, dynamic> json) => HexPosition(
         hexIndex: json['hexIndex'] as int,
         dx: (json['dx'] as num).toDouble(),
         dy: (json['dy'] as num).toDouble(),
+        rotation: (json['rotation'] as int?) ?? 0,
       );
 }

@@ -3,11 +3,13 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_settings.dart';
+import '../models/color_preset.dart';
 import '../models/hex_layout.dart';
 import '../models/hex_state.dart';
 import '../utils/color_channels.dart';
 import '../utils/default_layout.dart';
 import 'layout_storage_service.dart';
+import 'preset_storage_service.dart';
 import 'settings_storage_service.dart';
 import 'udp_service.dart';
 
@@ -20,11 +22,14 @@ class HexStateProvider extends ChangeNotifier {
   HexStateProvider({
     LayoutStorageService? layoutStorage,
     SettingsStorageService? settingsStorage,
+    PresetStorageService? presetStorage,
   })  : _layoutStorage = layoutStorage ?? LayoutStorageService(),
-        _settingsStorage = settingsStorage ?? SettingsStorageService();
+        _settingsStorage = settingsStorage ?? SettingsStorageService(),
+        _presetStorage = presetStorage ?? PresetStorageService();
 
   final LayoutStorageService _layoutStorage;
   final SettingsStorageService _settingsStorage;
+  final PresetStorageService _presetStorage;
 
   late UdpService udp;
 
@@ -34,6 +39,7 @@ class HexStateProvider extends ChangeNotifier {
       List.generate(kHexCount, (i) => HexState(hexIndex: i + 1));
   AppSettings settings = AppSettings.defaultSettings;
   int brightness = 255;
+  List<ColorPreset> presets = [];
 
   Future<void> init() async {
     final savedLayout = await _layoutStorage.loadLayout();
@@ -46,12 +52,27 @@ class HexStateProvider extends ChangeNotifier {
 
     settings = await _settingsStorage.loadSettings() ?? AppSettings.defaultSettings;
     udp = UdpService(targetIp: settings.esp32Ip, targetPort: settings.port);
+    presets = await _presetStorage.loadPresets();
 
     isLoading = false;
     notifyListeners();
   }
 
   HexState hexStateFor(int hexIndex) => hexStates[hexIndex - 1];
+
+  /// Number of 30-degree clockwise visual rotation steps applied to
+  /// [hexIndex]'s hexagon graphic, see [HexPosition.rotation].
+  int rotationFor(int hexIndex) =>
+      layout.firstWhere((p) => p.hexIndex == hexIndex).rotation;
+
+  /// Rotates [hexIndex] by one more 30-degree step (wrapping 0-11) and persists it.
+  Future<void> rotateHex(int hexIndex) async {
+    final i = layout.indexWhere((p) => p.hexIndex == hexIndex);
+    if (i == -1) return;
+    layout[i] = layout[i].copyWith(rotation: (layout[i].rotation + 1) % 12);
+    notifyListeners();
+    await persistLayout();
+  }
 
   /// Live-updates a hexagon's position during a drag without touching disk.
   void updateLayoutDelta(int hexIndex, Offset delta) {
@@ -116,6 +137,50 @@ class HexStateProvider extends ChangeNotifier {
     settings = AppSettings(esp32Ip: ip, port: port);
     udp.updateTarget(ip, port);
     await _settingsStorage.saveSettings(settings);
+    notifyListeners();
+  }
+
+  /// Saves the current colors of all 7 hexagons and the global brightness
+  /// as a named preset, replacing any existing preset with the same name.
+  Future<void> saveCurrentAsPreset(String name) async {
+    final preset = ColorPreset(
+      name: name,
+      wholeColors: hexStates.map((s) => s.wholeColor).toList(),
+      edgeColors: hexStates.map((s) => List<Color>.from(s.edgeColors)).toList(),
+      brightness: brightness,
+    );
+    presets = [...presets.where((p) => p.name != name), preset];
+    await _presetStorage.savePresets(presets);
+    notifyListeners();
+  }
+
+  /// Restores all 7 hexagons' colors and the global brightness from [preset].
+  Future<void> applyPreset(ColorPreset preset) async {
+    for (var i = 0; i < kHexCount; i++) {
+      final hexIndex = i + 1;
+      final whole = preset.wholeColors[i];
+      final edges = preset.edgeColors[i];
+
+      final state = hexStateFor(hexIndex);
+      state.wholeColor = whole;
+      for (var e = 0; e < 6; e++) {
+        state.edgeColors[e] = edges[e];
+      }
+
+      await udp.sendColorHex(hexIndex, whole.r8, whole.g8, whole.b8);
+      for (var e = 0; e < 6; e++) {
+        await udp.sendColorEdge(hexIndex, e, edges[e].r8, edges[e].g8, edges[e].b8);
+      }
+    }
+
+    brightness = preset.brightness;
+    await udp.sendBrightness(brightness);
+    notifyListeners();
+  }
+
+  Future<void> deletePreset(String name) async {
+    presets = presets.where((p) => p.name != name).toList();
+    await _presetStorage.savePresets(presets);
     notifyListeners();
   }
 

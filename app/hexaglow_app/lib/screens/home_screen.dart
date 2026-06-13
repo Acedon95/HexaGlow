@@ -6,6 +6,7 @@ import '../utils/default_layout.dart';
 import '../widgets/color_wheel_dialog.dart';
 import '../widgets/hexagon_widget.dart';
 import 'hex_detail_screen.dart';
+import 'presets_screen.dart';
 import 'settings_screen.dart';
 
 /// Main screen: a freely-arrangeable canvas of the 7 hexagons plus global
@@ -32,6 +33,14 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(_editMode ? Icons.lock_open : Icons.lock_outline),
             tooltip: _editMode ? 'Done arranging' : 'Edit layout',
             onPressed: () => setState(() => _editMode = !_editMode),
+          ),
+          IconButton(
+            icon: const Icon(Icons.palette_outlined),
+            tooltip: 'Color Presets',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PresetsScreen()),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -78,23 +87,46 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned(
                 left: pos.dx,
                 top: pos.dy,
-                child: GestureDetector(
-                  onPanUpdate: _editMode
-                      ? (details) => provider.updateLayoutDelta(pos.hexIndex, details.delta)
-                      : null,
-                  onPanEnd: _editMode ? (_) => provider.persistLayout() : null,
-                  onTap: _editMode
-                      ? null
-                      : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => HexDetailScreen(hexIndex: pos.hexIndex),
-                            ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    GestureDetector(
+                      onPanUpdate: _editMode
+                          ? (details) => provider.updateLayoutDelta(pos.hexIndex, details.delta)
+                          : null,
+                      onPanEnd: _editMode ? (_) => provider.persistLayout() : null,
+                      onTap: _editMode
+                          ? null
+                          : () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HexDetailScreen(hexIndex: pos.hexIndex),
+                                ),
+                              ),
+                      child: HexagonWidget(
+                        state: provider.hexStateFor(pos.hexIndex),
+                        size: kHexBoxSize,
+                        rotation: pos.rotation,
+                        showEdgeLabels: _editMode,
+                      ),
+                    ),
+                    if (_editMode)
+                      Positioned(
+                        right: -8,
+                        top: -8,
+                        child: Material(
+                          color: Colors.black54,
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            icon: const Icon(Icons.rotate_right, size: 18, color: Colors.white),
+                            tooltip: 'Rotate',
+                            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => provider.rotateHex(pos.hexIndex),
                           ),
-                  child: HexagonWidget(
-                    state: provider.hexStateFor(pos.hexIndex),
-                    size: kHexBoxSize,
-                  ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
           ],
