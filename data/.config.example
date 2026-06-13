@@ -1,0 +1,3 @@
+// Config should look like this; then upload it via `pio run --target uploadfs` 
+ssid:<your-ssid>
+password:<your-pw>
